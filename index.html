@@ -46,9 +46,21 @@
       margin-bottom: 20px;
     }
 
+    button {
+      width: 100%;
+      border: 0;
+      border-radius: 14px;
+      padding: 16px;
+      font-size: 16px;
+      font-weight: 700;
+      color: white;
+      background: #20283a;
+      cursor: pointer;
+    }
+
     #reader {
       width: 100%;
-      margin: 0 auto;
+      margin: 20px auto 0;
     }
 
     #risultato {
@@ -85,161 +97,153 @@
       del cliente.
     </div>
 
+    <button id="avviaScanner" onclick="avviaScanner()">
+      📷 AVVIA FOTOCAMERA
+    </button>
+
     <div id="reader"></div>
 
     <div id="risultato"></div>
 
   </div>
 
-  <script>
+<script>
 
-    /*
-     * URL DEL TUO GESTIONALE
-     */
-    const GESTIONALE_URL =
-      'https://script.google.com/macros/s/AKfycbxP-RdFMcRXs1ohH_CGLWtJRfptAfmKSagnVYy-3VT0hKOeDcRSB_f6xlXA0Nhcuwc/exec';
+const GESTIONALE_URL =
+  'https://script.google.com/macros/s/AKfycbxP-RdFMcRXs1ohH_CGLWtJRfptAfmKSagnVYy-3VT0hKOeDcRSB_f6xlXA0Nhcuwc/exec';
 
-
-    let scanner = null;
-    let qrGiaLetto = false;
+let scanner = null;
+let qrGiaLetto = false;
 
 
-    /*
-     * QUANDO VIENE LETTO IL QR
-     */
-    function gestisciQR(testo) {
+/* ================================
+   AVVIA FOTOCAMERA
+================================ */
 
-      if (qrGiaLetto) {
-        return;
+function avviaScanner() {
+
+  if (scanner) {
+    return;
+  }
+
+  document.getElementById('avviaScanner').style.display = 'none';
+
+  document.getElementById('risultato').innerHTML =
+    '<span class="piccolo">' +
+    'Richiesta accesso alla fotocamera...' +
+    '</span>';
+
+  scanner = new Html5QrcodeScanner(
+    'reader',
+    {
+      fps: 10,
+      qrbox: {
+        width: 250,
+        height: 250
       }
+    },
+    false
+  );
 
-      let codice = '';
+  scanner.render(
+    function(decodedText) {
 
+      gestisciQR(decodedText);
 
-      /*
-       * Il QR attuale contiene:
-       *
-       * ?pagina=punti&cliente=CSP-XXXXXXXX
-       *
-       * Noi prendiamo SOLO il codice cliente.
-       */
-      try {
+    },
+    function(errorMessage) {
 
-        const url = new URL(testo);
-
-        codice =
-          url.searchParams.get('cliente') || '';
-
-      } catch (e) {
-
-        document.getElementById('risultato').innerHTML =
-          '<span class="errore">' +
-          '❌ QR non riconosciuto.' +
-          '</span>';
-
-        return;
-      }
-
-
-      codice =
-        String(codice)
-          .trim()
-          .toUpperCase();
-
-
-      if (!codice) {
-
-        document.getElementById('risultato').innerHTML =
-          '<span class="errore">' +
-          '❌ Cliente non riconosciuto.' +
-          '</span>';
-
-        return;
-      }
-
-
-      qrGiaLetto = true;
-
-
-      document.getElementById('risultato').innerHTML =
-        '<span class="ok">' +
-        '✓ Cliente riconosciuto<br>' +
-        codice +
-        '</span>' +
-        '<br>' +
-        '<span class="piccolo">' +
-        'Apertura gestionale...' +
-        '</span>';
-
-
-      /*
-       * Ferma la fotocamera.
-       */
-      try {
-
-        scanner.clear();
-
-      } catch (e) {}
-
-
-      /*
-       * Per ora passiamo il codice cliente
-       * al gestionale.
-       */
-      const destinazione =
-        GESTIONALE_URL +
-        '?pagina=gestione&cliente=' +
-        encodeURIComponent(codice);
-
-
-      setTimeout(function() {
-
-        window.location.href =
-          destinazione;
-
-      }, 500);
+      // Gli errori durante la ricerca
+      // del QR sono normali.
 
     }
+  );
+}
 
 
-    /*
-     * AVVIO SCANNER
-     */
-    scanner =
-      new Html5QrcodeScanner(
-        'reader',
-        {
-          fps: 10,
+/* ================================
+   GESTIONE QR
+================================ */
 
-          qrbox: {
-            width: 250,
-            height: 250
-          }
-        },
-        false
-      );
+function gestisciQR(testo) {
+
+  if (qrGiaLetto) {
+    return;
+  }
+
+  let codice = '';
+
+  try {
+
+    const url = new URL(testo);
+
+    codice =
+      url.searchParams.get('cliente') || '';
+
+  } catch (e) {
+
+    document.getElementById('risultato').innerHTML =
+      '<span class="errore">' +
+      '❌ QR non riconosciuto.' +
+      '</span>';
+
+    return;
+  }
 
 
-    scanner.render(
+  codice =
+    String(codice)
+      .trim()
+      .toUpperCase();
 
-      function(decodedText) {
 
-        gestisciQR(decodedText);
+  if (!codice) {
 
-      },
+    document.getElementById('risultato').innerHTML =
+      '<span class="errore">' +
+      '❌ Cliente non riconosciuto.' +
+      '</span>';
 
-      function(errorMessage) {
+    return;
+  }
 
-        /*
-         * Gli errori durante la ricerca
-         * del QR sono normali.
-         */
 
-      }
+  qrGiaLetto = true;
 
-    );
 
-  </script>
+  document.getElementById('risultato').innerHTML =
+    '<span class="ok">' +
+    '✓ Cliente riconosciuto<br>' +
+    codice +
+    '</span>' +
+    '<br>' +
+    '<span class="piccolo">' +
+    'Apertura gestionale...' +
+    '</span>';
+
+
+  try {
+
+    scanner.clear();
+
+  } catch (e) {}
+
+
+  const destinazione =
+    GESTIONALE_URL +
+    '?pagina=gestione&cliente=' +
+    encodeURIComponent(codice);
+
+
+  setTimeout(function() {
+
+    window.location.href = destinazione;
+
+  }, 500);
+
+}
+
+</script>
 
 </body>
 </html>

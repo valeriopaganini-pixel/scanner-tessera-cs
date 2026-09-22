@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+  >
+
+  <title>Scanner tessera C.S. IMPIANTI</title>
+
+  <script
+    src="https://unpkg.com/html5-qrcode"
+    type="text/javascript">
+  </script>
+
+  <style>
+    body {
+      margin: 0;
+      padding: 20px;
+      font-family: Arial, sans-serif;
+      background: #f4f6f7;
+      color: #111;
+      text-align: center;
+    }
+
+    .card {
+      max-width: 520px;
+      margin: 20px auto;
+      padding: 24px;
+      background: white;
+      border-radius: 22px;
+      box-shadow: 0 8px 25px rgba(0,0,0,.12);
+    }
+
+    h1 {
+      margin-top: 0;
+      font-size: 25px;
+    }
+
+    .descrizione {
+      color: #666;
+      font-size: 15px;
+      line-height: 1.5;
+      margin-bottom: 20px;
+    }
+
+    #reader {
+      width: 100%;
+      margin: 0 auto;
+    }
+
+    #risultato {
+      margin-top: 20px;
+      font-size: 18px;
+      font-weight: 700;
+      line-height: 1.5;
+    }
+
+    .ok {
+      color: #168a3a;
+    }
+
+    .errore {
+      color: #c00000;
+    }
+
+    .piccolo {
+      font-size: 14px;
+      font-weight: 400;
+      color: #666;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="card">
+
+    <h1>📷 Scansiona tessera cliente</h1>
+
+    <div class="descrizione">
+      Inquadra il QR della tessera digitale
+      del cliente.
+    </div>
+
+    <div id="reader"></div>
+
+    <div id="risultato"></div>
+
+  </div>
+
+  <script>
+
+    /*
+     * URL DEL TUO GESTIONALE
+     */
+    const GESTIONALE_URL =
+      'https://script.google.com/macros/s/AKfycbxP-RdFMcRXs1ohH_CGLWtJRfptAfmKSagnVYy-3VT0hKOeDcRSB_f6xlXA0Nhcuwc/exec';
+
+
+    let scanner = null;
+    let qrGiaLetto = false;
+
+
+    /*
+     * QUANDO VIENE LETTO IL QR
+     */
+    function gestisciQR(testo) {
+
+      if (qrGiaLetto) {
+        return;
+      }
+
+      let codice = '';
+
+
+      /*
+       * Il QR attuale contiene:
+       *
+       * ?pagina=punti&cliente=CSP-XXXXXXXX
+       *
+       * Noi prendiamo SOLO il codice cliente.
+       */
+      try {
+
+        const url = new URL(testo);
+
+        codice =
+          url.searchParams.get('cliente') || '';
+
+      } catch (e) {
+
+        document.getElementById('risultato').innerHTML =
+          '<span class="errore">' +
+          '❌ QR non riconosciuto.' +
+          '</span>';
+
+        return;
+      }
+
+
+      codice =
+        String(codice)
+          .trim()
+          .toUpperCase();
+
+
+      if (!codice) {
+
+        document.getElementById('risultato').innerHTML =
+          '<span class="errore">' +
+          '❌ Cliente non riconosciuto.' +
+          '</span>';
+
+        return;
+      }
+
+
+      qrGiaLetto = true;
+
+
+      document.getElementById('risultato').innerHTML =
+        '<span class="ok">' +
+        '✓ Cliente riconosciuto<br>' +
+        codice +
+        '</span>' +
+        '<br>' +
+        '<span class="piccolo">' +
+        'Apertura gestionale...' +
+        '</span>';
+
+
+      /*
+       * Ferma la fotocamera.
+       */
+      try {
+
+        scanner.clear();
+
+      } catch (e) {}
+
+
+      /*
+       * Per ora passiamo il codice cliente
+       * al gestionale.
+       */
+      const destinazione =
+        GESTIONALE_URL +
+        '?pagina=gestione&cliente=' +
+        encodeURIComponent(codice);
+
+
+      setTimeout(function() {
+
+        window.location.href =
+          destinazione;
+
+      }, 500);
+
+    }
+
+
+    /*
+     * AVVIO SCANNER
+     */
+    scanner =
+      new Html5QrcodeScanner(
+        'reader',
+        {
+          fps: 10,
+
+          qrbox: {
+            width: 250,
+            height: 250
+          }
+        },
+        false
+      );
+
+
+    scanner.render(
+
+      function(decodedText) {
+
+        gestisciQR(decodedText);
+
+      },
+
+      function(errorMessage) {
+
+        /*
+         * Gli errori durante la ricerca
+         * del QR sono normali.
+         */
+
+      }
+
+    );
+
+  </script>
+
+</body>
+</html>
